@@ -86,22 +86,32 @@ void free(void *ptr) {
     descriptor = (struct Descriptor *) (ptr - sizeof(struct Descriptor));
 
     descriptor->isFree = true;
+
     struct Descriptor *next = (Descriptor *) ((char *) descriptor + descriptor->size + sizeof(Descriptor));
     if (next < last_valid_address && next->isFree) {
         descriptor->size += next->size + sizeof(Descriptor);
+
+
     }
 
     if (descriptor->prev != NULL && descriptor->prev->isFree) {
-        descriptor->prev->size += descriptor->size + sizeof(Descriptor);
+        int size = descriptor->size + sizeof(Descriptor);
+        descriptor = descriptor->prev;
+        descriptor->size += size;
+//        descriptor->prev->size += descriptor->size + sizeof(Descriptor);
     }
-    //TODO просмотреть следующий блок и объеденить с ним или с предыдущим
+
+    struct Descriptor *nextByNext = (Descriptor *) ((char *) descriptor + descriptor->size + sizeof(Descriptor));
+    nextByNext->prev = descriptor;
     return;
 }
 
 void Dump() {
+    std::cout << endl;
     void *current_location;
     current_location = managed_memory_start;
     struct Descriptor *currentDescriptor;
+
     while (current_location < last_valid_address) {
         currentDescriptor = (struct Descriptor *) current_location;
         std::cout << currentDescriptor->size << ' ' << currentDescriptor->isFree << endl;
@@ -119,11 +129,16 @@ int main() {
     void *qwe5 = (alloc(15));
     void *qwe6 = (alloc(16));
     Dump();
-    std::cout<<endl;
+
 
     free(qwe3);
     free(qwe5);
     free(qwe4);
+    free(qwe6);
+    free(qwe2);
+    free(qwe);
+    Dump();
+    struct Descriptor *a = (struct Descriptor *) (qwe2 - sizeof(Descriptor));
 
     Dump();
 

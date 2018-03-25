@@ -7,6 +7,7 @@ using namespace std;
 struct Descriptor {
     bool isFree;
     int size;
+    Descriptor *prev;
 };
 
 int has_initialized = 0;
@@ -32,6 +33,7 @@ void init() {
     auto *firstDescriptor = (struct Descriptor *) managed_memory_start;
     firstDescriptor->isFree = true;
     firstDescriptor->size = size - sizeof(struct Descriptor);
+    firstDescriptor->prev = NULL;
 
 }
 
@@ -60,9 +62,10 @@ void *alloc(int num_bytes) {
             int available = oldBlockSize - sizeof(Descriptor) - num_bytes;
 
             if (available > 0) {
-                Descriptor *newDescriptor = (struct Descriptor *)(memory_location + currentDescriptor->size);
+                Descriptor *newDescriptor = (struct Descriptor *) (memory_location + currentDescriptor->size);
                 newDescriptor->isFree = true;
                 newDescriptor->size = available;
+                newDescriptor->prev = currentDescriptor;
             }
             break;
         }
@@ -83,6 +86,14 @@ void free(void *ptr) {
     descriptor = (struct Descriptor *) (ptr - sizeof(struct Descriptor));
 
     descriptor->isFree = true;
+    struct Descriptor *next = (Descriptor *) ((char *) descriptor + descriptor->size + sizeof(Descriptor));
+    if (next < last_valid_address && next->isFree) {
+        descriptor->size += next->size + sizeof(Descriptor);
+    }
+
+    if (descriptor->prev != NULL && descriptor->prev->isFree) {
+        descriptor->prev->size += descriptor->size + sizeof(Descriptor);
+    }
     //TODO просмотреть следующий блок и объеденить с ним или с предыдущим
     return;
 }
@@ -93,7 +104,7 @@ void Dump() {
     struct Descriptor *currentDescriptor;
     while (current_location < last_valid_address) {
         currentDescriptor = (struct Descriptor *) current_location;
-        std::cout << currentDescriptor->size<<' '<<currentDescriptor->isFree <<endl;
+        std::cout << currentDescriptor->size << ' ' << currentDescriptor->isFree << endl;
         current_location += currentDescriptor->size + sizeof(Descriptor);
     }
 
@@ -101,16 +112,19 @@ void Dump() {
 
 
 int main() {
+    void *qwe = (alloc(11));
+    void *qwe2 = (alloc(12));
+    void *qwe3 = (alloc(13));
+    void *qwe4 = (alloc(14));
+    void *qwe5 = (alloc(15));
+    void *qwe6 = (alloc(16));
+    Dump();
+    std::cout<<endl;
 
-    void *qwe = static_cast<char *>(alloc(101));
-    void *qwe2 = static_cast<char *>(alloc(102));
-    void *qwe3 = static_cast<char *>(alloc(103));
-    void *qwe4 = static_cast<char *>(alloc(104));
+    free(qwe3);
+    free(qwe5);
+    free(qwe4);
 
-//    std::cout << ((Descriptor *) (qwe - sizeof(struct Descriptor)))->size << endl;
-    Descriptor* a = static_cast<Descriptor *>(qwe- sizeof(Descriptor));
-    std::cout << qwe - sizeof(struct Descriptor)<<endl;
-    free(qwe2);
     Dump();
 
 }
